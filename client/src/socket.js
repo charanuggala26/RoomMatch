@@ -6,7 +6,9 @@ let socket = null;
 // so logging in as another user and reconnecting always uses the right identity.
 export function getSocket() {
   if (!socket) {
-    socket = io("/", {
+    const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "/";
+
+socket = io(SOCKET_URL, {
       auth: (cb) => cb({ token: localStorage.getItem("token") }),
       reconnectionDelayMax: 5000,
     });
