@@ -52,7 +52,13 @@ delete legacy.smoking;
 delete legacy.pets;
 delete legacy.choreStyle;
 delete legacy.cookingFrequency;
-assert.equal(computeCompatibility(legacy, legacy).score, 100);
+assert.ok(computeCompatibility(legacy, legacy).score < 100); // missing fields are neutral, not fabricated matches
 assert.ok(computeCompatibility(legacy, { ...legacy, smoking: "indoors" }).score < 100);
+const incomplete = computeCompatibility({ cleanliness: undefined, noiseTolerance: null }, {});
+assert.ok(Number.isFinite(incomplete.score));
+assert.ok(incomplete.breakdown.every((f) => Number.isFinite(f.percentage) && f.percentage >= 0 && f.percentage <= 100));
+assert.equal(incomplete.breakdown.find((f) => f.key === "cleanliness").yours, "Not set");
+assert.equal(incomplete.breakdown.find((f) => f.key === "noiseTolerance").theirs, "Not set");
+assert.equal(incomplete.breakdown.find((f) => f.key === "budget").yours, "Not set");
 
 console.log("compatibility tests passed:", { same: same.score, opposite: opposite.score });

@@ -13,8 +13,6 @@ import groupRoutes from "./routes/groups.js";
 import messageRoutes from "./routes/messages.js";
 import { initRealtime } from "./realtime.js";
 
-// dns.setServers(["8.8.8.8", "8.8.4.4"]);
-
 // Configure DNS before connecting to MongoDB
 if (process.env.DNS_SERVERS) {
   const servers = process.env.DNS_SERVERS

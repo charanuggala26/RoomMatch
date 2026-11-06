@@ -34,15 +34,15 @@ function WhyModal({ userId, onClose }) {
           </div>
 
           <div className="summary">
-            {data.strengths.length > 0 && <p><b>Works well:</b> {data.strengths.join(", ")}.</p>}
-            {data.concerns.length > 0 && <p><b>Talk about before moving in:</b> {data.concerns.join(", ")}.</p>}
+            {(data.strengths || []).length > 0 && <p><b>Works well:</b> {data.strengths.join(", ")}.</p>}
+            {(data.concerns || []).length > 0 && <p><b>Talk about before moving in:</b> {data.concerns.join(", ")}.</p>}
           </div>
 
-          {data.breakdown.map((f) => (
+          {(data.breakdown || []).map((f) => (
             <div className="factor" key={f.key}>
               <div className="factor-top">
                 <b>{f.label} <span className={`tag ${f.verdict === "clash" ? "warn" : ""}`}>{VERDICT_WORD[f.verdict]}</span></b>
-                <span className="pts">{f.points} / {f.weight}</span>
+                <span className="pts">{f.percentage}% match · {f.points} / {f.weight} pts</span>
               </div>
               <div className="meter" role="img" aria-label={`${Math.round(f.similarity * 100)}% similar`}>
                 <i className={f.verdict} style={{ width: `${f.similarity * 100}%` }} />
@@ -87,8 +87,8 @@ function EmailModal({ match, onClose }) {
 function MatchMeta({ m }) {
   return (
     <div className="match-meta">
-      {m.strengths.slice(0, 3).map((s) => <span className="tag" key={s}>{s}</span>)}
-      {m.concerns.slice(0, 2).map((s) => <span className="tag warn" key={s}>{s}</span>)}
+      {(m.strengths || []).slice(0, 3).map((s) => <span className="tag" key={s}>{s}</span>)}
+      {(m.concerns || []).slice(0, 2).map((s) => <span className="tag warn" key={s}>{s}</span>)}
     </div>
   );
 }
@@ -156,7 +156,7 @@ export default function Matches() {
           <div>
             <p className="muted small">Best match</p>
             <h2>{top.name}</h2>
-            <p className="muted">{top.location || "Area not set"}, {top.score}% in common</p>
+            <p className="muted">{top.location || "Area not set"}</p><div className={`score ${band(top.score)}`}>{top.score}<small>% overall match</small></div>
             <MatchMeta m={top} />
             <div className="actions">
               <button className="btn" onClick={() => setOpen(top.id)}>Why are we compatible?</button>

@@ -52,31 +52,42 @@ const FOOD_SIM = {
   "veg|nonveg": 0.3,
 };
 
-const clamp = (n) => Math.max(0, Math.min(1, n));
-const ordinalSim = (map, a, b) => 1 - Math.abs(map[a] - map[b]) / 2;
-const scaleSim = (a, b) => 1 - Math.abs(a - b) / 4; // 1..5 scales
+const hasValue = (v) => v !== undefined && v !== null && v !== "";
+const clamp = (n) => Number.isFinite(n) ? Math.max(0, Math.min(1, n)) : 0.5;
+const ordinalSim = (map, a, b) => {
+  if (!hasValue(a) || !hasValue(b) || !Object.hasOwn(map, a) || !Object.hasOwn(map, b)) return 0.5;
+  return 1 - Math.abs(map[a] - map[b]) / 2;
+};
+const scaleSim = (a, b) => {
+  const x = Number(a), y = Number(b);
+  if (!hasValue(a) || !hasValue(b) || !Number.isFinite(x) || !Number.isFinite(y) || x < 1 || x > 5 || y < 1 || y > 5) return 0.5;
+  return 1 - Math.abs(x - y) / 4;
+};
 
 function foodSim(a, b) {
+  if (!hasValue(a) || !hasValue(b)) return 0.5;
   return FOOD_SIM[`${a}|${b}`] ?? FOOD_SIM[`${b}|${a}`] ?? 0.5;
 }
 
 function budgetSim(a, b) {
-  const lo = Math.max(a.budgetMin, b.budgetMin);
-  const hi = Math.min(a.budgetMax, b.budgetMax);
+  const aMin = Number(a.budgetMin), aMax = Number(a.budgetMax);
+  const bMin = Number(b.budgetMin), bMax = Number(b.budgetMax);
+  if (![aMin, aMax, bMin, bMax].every(Number.isFinite) || !hasValue(a.budgetMin) ||
+      !hasValue(a.budgetMax) || !hasValue(b.budgetMin) || !hasValue(b.budgetMax) ||
+      aMin <= 0 || bMin <= 0 || aMax < aMin || bMax < bMin) return 0.5;
+  const lo = Math.max(aMin, bMin);
+  const hi = Math.min(aMax, bMax);
   if (hi >= lo) {
-    const smaller = Math.min(a.budgetMax - a.budgetMin, b.budgetMax - b.budgetMin) || 1;
-    return clamp(0.5 + 0.5 * ((hi - lo) / smaller)); // any overlap is at least 50%
+    const smaller = Math.min(aMax - aMin, bMax - bMin) || 1;
+    return clamp(0.5 + 0.5 * ((hi - lo) / smaller));
   }
-  // No overlap: penalise by gap relative to the cheaper budget's ceiling
-  const gap = lo - hi;
-  const base = Math.min(a.budgetMax, b.budgetMax) || 1;
-  return clamp(0.5 - gap / base);
+  return clamp(0.5 - (lo - hi) / Math.min(aMax, bMax));
 }
 
 function locationSim(a, b) {
-  const x = (a || "").trim().toLowerCase();
-  const y = (b || "").trim().toLowerCase();
-  if (!x || !y) return 0.5; // unknown -> neutral
+  const x = hasValue(a) ? String(a).trim().toLowerCase() : "";
+  const y = hasValue(b) ? String(b).trim().toLowerCase() : "";
+  if (!x || !y) return 0.5;
   if (x === y) return 1;
   if (x.includes(y) || y.includes(x)) return 0.7;
   return 0;
@@ -89,17 +100,17 @@ function verdict(sim) {
 }
 
 const display = {
-  sleepSchedule: (v) => ({ early: "Early bird", flexible: "Flexible", night: "Night owl" }[v]),
-  foodHabits: (v) => ({ veg: "Vegetarian", eggetarian: "Eggetarian", nonveg: "Non-veg" }[v]),
-  studyHabits: (v) => ({ silent: "Needs silence", mixed: "Mixed", social: "Group / social" }[v]),
-  guestFrequency: (v) => ({ rarely: "Rarely", sometimes: "Sometimes", often: "Often" }[v]),
-  smoking: (v) => ({ never: "Non-smoker", outside: "Outside only", indoors: "Smokes indoors" }[v]),
-  pets: (v) => ({ love: "Loves pets", okay: "Pets are okay", avoid: "Prefers no pets" }[v]),
-  choreStyle: (v) => ({ together: "Clean together", schedule: "Set rota", flexible: "As needed" }[v]),
-  cookingFrequency: (v) => ({ rarely: "Rarely cooks", sometimes: "Cooks sometimes", often: "Cooks often" }[v]),
-  cleanliness: (v) => `${v}/5`,
-  noiseTolerance: (v) => `${v}/5`,
-  location: (v) => v || "Not set",
+  sleepSchedule: (v) => ({ early: "Early bird", flexible: "Flexible", night: "Night owl" }[v] || "Not set"),
+  foodHabits: (v) => ({ veg: "Vegetarian", eggetarian: "Eggetarian", nonveg: "Non-veg" }[v] || "Not set"),
+  studyHabits: (v) => ({ silent: "Needs silence", mixed: "Mixed", social: "Group / social" }[v] || "Not set"),
+  guestFrequency: (v) => ({ rarely: "Rarely", sometimes: "Sometimes", often: "Often" }[v] || "Not set"),
+  smoking: (v) => ({ never: "Non-smoker", outside: "Outside only", indoors: "Smokes indoors" }[v] || "Not set"),
+  pets: (v) => ({ love: "Loves pets", okay: "Pets are okay", avoid: "Prefers no pets" }[v] || "Not set"),
+  choreStyle: (v) => ({ together: "Clean together", schedule: "Set rota", flexible: "As needed" }[v] || "Not set"),
+  cookingFrequency: (v) => ({ rarely: "Rarely cooks", sometimes: "Cooks sometimes", often: "Cooks often" }[v] || "Not set"),
+  cleanliness: (v) => hasValue(v) && Number.isFinite(Number(v)) && Number(v) >= 1 && Number(v) <= 5 ? `${Number(v)}/5` : "Not set",
+  noiseTolerance: (v) => hasValue(v) && Number.isFinite(Number(v)) && Number(v) >= 1 && Number(v) <= 5 ? `${Number(v)}/5` : "Not set",
+  location: (v) => hasValue(v) ? String(v) : "Not set",
 };
 
 function note(key, sim, a, b) {
@@ -166,20 +177,12 @@ function note(key, sim, a, b) {
       clash: "You prefer different locations.",
     },
   };
-  return msg[key][v];
+  return msg[key]?.[v] || "One or both profiles have not set this preference yet, so it is treated as neutral.";
 }
 
-export function computeCompatibility(a, b) {
-  const preferences = (p) => ({
-    guestFrequency: p.guestFrequency || "sometimes",
-    smoking: p.smoking || "never",
-    pets: p.pets || "okay",
-    choreStyle: p.choreStyle || "schedule",
-    cookingFrequency: p.cookingFrequency || "sometimes",
-    ...p,
-  });
-  a = preferences(a);
-  b = preferences(b);
+export function computeCompatibility(a = {}, b = {}) {
+  a = a && typeof a === "object" ? a : {};
+  b = b && typeof b === "object" ? b : {};
 
   const sims = {
     sleepSchedule: ordinalSim(SLEEP, a.sleepSchedule, b.sleepSchedule),
@@ -196,18 +199,27 @@ export function computeCompatibility(a, b) {
     location: locationSim(a.location, b.location),
   };
 
+  const budgetText = (p) => {
+    const min = Number(p.budgetMin), max = Number(p.budgetMax);
+    if (!hasValue(p.budgetMin) || !hasValue(p.budgetMax) || !Number.isFinite(min) ||
+        !Number.isFinite(max) || min <= 0 || max < min) return "Not set";
+    return `₹${min.toLocaleString("en-IN")}–₹${max.toLocaleString("en-IN")}`;
+  };
+
   const breakdown = Object.keys(WEIGHTS).map((key) => {
     const similarity = clamp(sims[key]);
     const isBudget = key === "budget";
+    const factorVerdict = verdict(similarity);
     return {
       key,
       label: LABELS[key],
       weight: WEIGHTS[key],
       similarity: Math.round(similarity * 100) / 100,
+      percentage: Math.round(similarity * 100),
       points: Math.round(similarity * WEIGHTS[key] * 10) / 10,
-      verdict: verdict(similarity),
-      yours: isBudget ? `₹${a.budgetMin}–₹${a.budgetMax}` : display[key](a[key]),
-      theirs: isBudget ? `₹${b.budgetMin}–₹${b.budgetMax}` : display[key](b[key]),
+      verdict: factorVerdict,
+      yours: isBudget ? budgetText(a) : display[key](a[key]),
+      theirs: isBudget ? budgetText(b) : display[key](b[key]),
       note: note(key, similarity, a, b),
     };
   });

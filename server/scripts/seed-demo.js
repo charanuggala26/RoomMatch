@@ -9,8 +9,13 @@ import Group from "../models/Group.js";
 import Settlement from "../models/Settlement.js";
 import User from "../models/User.js";
 import { equalSplit } from "../utils/balances.js";
-dns.setServers(["8.8.8.8", "8.8.4.4"]);
 
+dns.setServers(
+  (process.env.DNS_SERVERS || "8.8.8.8,8.8.4.4")
+    .split(",")
+    .map((server) => server.trim())
+    .filter(Boolean)
+);
 
 console.log("Seed DNS servers:", dns.getServers());
 
